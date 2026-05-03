@@ -34,8 +34,6 @@ BASEDIR="${BASEDIR:-./messy2}"
 
 uMAMBA_ENVNAME="${uMAMBA_ENVNAME:-messy2}"
 
-mkdir -p ${BASEDIR}/instances/
-
 # install litestar-pulse
 source <(curl -L https://raw.githubusercontent.com/trmznt/litestar-pulse/main/install.sh)
 
