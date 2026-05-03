@@ -38,7 +38,7 @@ uMAMBA_ENVNAME="${uMAMBA_ENVNAME:-messy2}"
 source <(curl -L https://raw.githubusercontent.com/trmznt/litestar-pulse/main/install.sh)
 
 echo "Cloning MESSy2"
-git clone --depth 1 https://github.com/trmznt/messy2.git ${ENVS_DIR}/messy2
+git clone --depth 1 https://github.com/vivaxgen/messy2.git ${ENVS_DIR}/messy2
 
 # perform 2nd stage installation for MESSy2
 source ${ENVS_DIR}/messy2/etc/inst-scripts/inst-stage-2.sh
