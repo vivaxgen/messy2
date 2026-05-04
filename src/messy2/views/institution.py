@@ -25,13 +25,20 @@ from litestar_pulse.views.modelview import LPModelView, form_submit_bar
 from ..db.models.schema import Institution
 
 
-class InstitutionForm(fb.FormBuilder):
-    name = f.TextField(
+class InstitutionForm(fb.ModelForm):
+    model_type = Institution
+
+    code = fb.StringField(
+        label="Institution Code",
+        required=True,
+        max_length=16,
+    )
+    name = fb.StringField(
         label="Institution Name",
         required=True,
         max_length=64,
     )
-    description = f.TextField(
+    description = fb.StringField(
         label="Description",
         required=False,
         max_length=256,
@@ -40,6 +47,7 @@ class InstitutionForm(fb.FormBuilder):
 
 class InstitutionView(LPModelView):
     model_type = Institution
+    model_form = InstitutionForm
 
 
 def generate_institution_table(
