@@ -1,4 +1,4 @@
-from messy2.lib import role as r
+from messy2.lib import roles as r
 
 GROUPS = [
     ("InstitutionMgr", [r.INSTITUTION_MANAGE]),
@@ -26,7 +26,7 @@ GROUPS = [
     ("Collaborator", [r.SAMPLE_MODIFY, r.SEQUENCE_VIEW]),
 ]
 
-ENUMKEY = [
+ENUMKEYS = [
     (
         "@SYSNAME",
         "System names",
@@ -52,9 +52,6 @@ ENUMKEY = [
             (r.SEQUENCINGRUN_MANAGE, "manage sequencing run"),
             (r.SEQUENCINGRUN_MODIFY, "modify sequencing run"),
             (r.SEQUENCINGRUN_VIEW, "view sequencing run"),
-            (r.SEQUENCE_MANAGE, "manage sequence"),
-            (r.SEQUENCE_MODIFY, "modify sequence"),
-            (r.SEQUENCE_VIEW, "view sequence"),
         ],
     ),
     (
@@ -252,3 +249,24 @@ ENUMKEY = [
         ],
     ),
 ]
+
+INSTITUTIONS = [
+    dict(
+        code="N/A",
+        name="Not Applicable",
+        address="",
+        zipcode="",
+        remark="Default for unassigned samples",
+    ),
+]
+
+PROJECTS = [
+    dict(
+        code="zz-INTERNAL-CONTROL",
+        remark="For intenal system",
+        institutions=["N/A"],
+        group="ProjectMgr",
+    ),
+]
+
+# EOF
