@@ -11,10 +11,36 @@ from litestar_pulse.cli.commands import NoReturn, pulsemgr, get_dbhandler
 
 import click
 
-pulsemgr.name = "messy2-cli"
+
+class RebrandedGroup(pulsemgr.__class__):
+    def __init__(self, *args, **kwargs):
+        # 1. Properly initialize the group with all Click-passed attributes
+        super().__init__(*args, **kwargs)
+
+        # 2. Merge parameters (options/arguments) from the existing group
+        # This preserves the original options for the new brand
+        self.params.extend(pulsemgr.params)
+
+        # 3. Inherit all existing subcommands into this top-level group
+        for cmd_name, cmd_obj in pulsemgr.commands.items():
+            self.add_command(cmd_obj, name=cmd_name)
 
 
-@pulsemgr.command(name="institution-list")
+@click.group(cls=RebrandedGroup, name="messy2-mgr")
+def messy2_mgr(use_ipdb: bool):
+    """This new group now has all the old options and commands."""
+    from litestar_pulse.db import set_initdb_function
+    from ..db.handler import MESSy2Handler
+    from ..db.initdb import initialize_database
+
+    click.echo("Initializing MESSy2 CLI...")
+    set_initdb_function(initialize_database)
+
+    ctx = click.get_current_context()
+    ctx.invoke(pulsemgr.callback, use_ipdb=use_ipdb)  # type: ignore
+
+
+@messy2_mgr.command(name="institution-list")
 async def institution_list():
     click.echo("Listing user domains...")
 
@@ -24,27 +50,19 @@ async def institution_list():
             click.echo(f"- {institution.name}")
 
 
-@pulsemgr.command(name="institution-add")
+@messy2_mgr.command(name="institution-add")
 async def institution_add():
     click.echo("Adding new institution...")
 
 
-@pulsemgr.command(name="project-list")
+@messy2_mgr.command(name="project-list")
 async def project_list():
     pass
 
 
-@pulsemgr.command(name="project-add")
+@messy2_mgr.command(name="project-add")
 async def project_add():
     pass
-
-
-def main() -> NoReturn:
-    """
-    CLI entry point for pulsemgr standalone command
-    """
-
-    pulsemgr()
 
 
 # EOF
