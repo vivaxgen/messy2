@@ -1,16 +1,22 @@
 [project]
 name = "messy2"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "MESSy2: Molecular Epidemiology and Surveillance Support System v2"
+readme = "README.rst"
 authors = [
     { name = "anto @ alrescha", email = "trimarsanto@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = []
 
+[project.entry-points."litestar.commands"]
+messy2-mgr = "messy2.cli.commands:messy2_mgr"
+
 [project.scripts]
 messy2 = "messy2:main"
+
+[tool.litestar]
+app = "messy2.lib.app:init_app"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
