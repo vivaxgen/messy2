@@ -1,4 +1,4 @@
-#!.usr/bin/env bash
+#!/usr/bin/env bash
 
 echo "Performing 2nd stage installation for MESSy2"
 
