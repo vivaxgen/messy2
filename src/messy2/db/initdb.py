@@ -42,9 +42,16 @@ async def initialize_seed(session: AsyncSession, result_dict: dict[str, Any]) ->
         return False
 
     # additional MESSy2 specific seeding can be added here if needed
-    # site_payloads = await normalize_site_payload(getattr(seed, "SITES", []))
-    # sites = await ensure_sites(site_payloads)
-    # result_dict["sites"] = sites
+
+    institution_payloads = await normalize_institution_payload(
+        getattr(seed, "INSTITUTIONS", [])
+    )
+    institutions = await ensure_institutions(institution_payloads)
+    result_dict["institutions"] = institutions
+
+    project_payloads = await normalize_project_payload(getattr(seed, "PROJECTS", []))
+    projects = await ensure_projects(project_payloads)
+    result_dict["projects"] = projects
 
     return True
 
@@ -66,4 +73,92 @@ async def initialize_database(initialize: bool = True) -> dict[str, int]:
     return {}
 
 
-# EPF
+async def normalize_institution_payload(payloads: list[Any]) -> list[dict[str, Any]]:
+    """
+    Normalizes institution payloads to ensure they conform to the expected format.
+
+    Args:
+        payloads (list[Any]): A list of institution payloads to normalize.
+
+    Returns:
+        list[dict[str, Any]]: A list of normalized institution payloads.
+    """
+
+    normalized_payloads = []
+    for payload in payloads:
+        if isinstance(payload, dict):
+            normalized_payloads.append(payload)
+        else:
+            logger.warning(f"Skipping invalid institution payload: {payload}")
+    return normalized_payloads
+
+
+async def ensure_institutions(payloads: list[dict[str, Any]]) -> int:
+    """
+    Ensures that institutions exist in the database based on the provided payloads.
+
+    Args:
+        payloads (list[dict[str, Any]]): A list of institution payloads to ensure.
+    Returns:
+        int: The number of institution records that were ensured in the database.
+    """
+
+    dbh = get_handler()
+    assert dbh is not None, "Database handler is not initialized"
+
+    counter = 0
+    dbh = get_handler()
+    for payload in payloads:
+        institution = await dbh.service.Institution.upsert_from_dict(payload, "code")
+        logger.info(f"Ensured Institution with code '{institution.code}'")
+        counter += 1
+
+    return counter
+
+
+async def normalize_project_payload(payloads: list[Any]) -> list[dict[str, Any]]:
+    """
+    Normalizes project payloads to ensure they conform to the expected format.
+
+    Args:
+        payloads (list[Any]): A list of project payloads to normalize.
+
+    Returns:
+        list[dict[str, Any]]: A list of normalized project payloads.
+    """
+
+    normalized_payloads = []
+    for payload in payloads:
+        if isinstance(payload, dict):
+            normalized_payloads.append(payload)
+        else:
+            logger.warning(f"Skipping invalid project payload: {payload}")
+    return normalized_payloads
+
+
+async def ensure_projects(payloads: list[dict[str, Any]]) -> int:
+    """
+    Ensures that projects exist in the database based on the provided payloads.
+
+    Args:
+        payloads (list[dict[str, Any]]): A list of project payloads to ensure.
+
+    Returns:
+        int: The number of project records that were ensured in the database.
+    """
+
+    dbh = get_handler()
+    assert dbh is not None, "Database handler is not initialized"
+
+    counter = 0
+    for payload in payloads:
+        project = await dbh.service.Project.upsert_from_dict(payload, "code")
+        logger.info(
+            f"Ensured Project with code '{project.code}' owned by group: {project.group}"
+        )
+        counter += 1
+
+    return counter
+
+
+# EOF

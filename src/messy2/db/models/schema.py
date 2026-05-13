@@ -11,8 +11,15 @@ from datetime import date
 from typing import Any
 
 
-from sqlalchemy import Column, Table, ForeignKey, UniqueConstraint, Identity
-from sqlalchemy.orm import DynamicMapped, Mapped, relationship, deferred, mapped_column
+from sqlalchemy import Column, Table, ForeignKey, UniqueConstraint, Identity, select
+from sqlalchemy.orm import (
+    DynamicMapped,
+    Mapped,
+    relationship,
+    deferred,
+    mapped_column,
+    object_session,
+)
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy import types, func
 
@@ -115,7 +122,7 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     institutions: Mapped[list[Institution]] = relationship(
         Institution,
         secondary=projects_institutions,
-        order_by=projects_institutions.c.id,
+        order_by=projects_institutions.c.institution_id,
     )
 
     samples: DynamicMapped[Sample] = relationship(
@@ -570,21 +577,21 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
         else:
             q = select(Sample)
         q = (
-            q.join(PlatePosition)
-            .join(Plate)
+            q.join(LabwarePosition)
+            .join(Labware)
             .join(SequencingRunPlate)
             .filter(SequencingRunPlate.sequencingrun_id == self.id)
             .filter(~Sample.code.in_(["-", "*", "NTC1", "NTC2", "NTC3", "NTC4"]))
         )
         if scalar:
-            return object_session(self).scalar(q)
-        return object_session(self).execute(q).scalars()
+            return object_session(self).scalar(q)  # type: ignore
+        return object_session(self).execute(q).scalars()  # type: ignore
 
     def update(self, obj):
 
         if isinstance(obj, dict):
 
-            dbh = get_dbhandler()
+            dbh = get_handler()  # type: ignore
 
             if "group" in obj:
                 obj["group_id"] = dbh.get_group(obj["group"]).id
@@ -596,7 +603,7 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
                 )[0].id
                 del obj["sequencing_provider"]
 
-            convert_date(obj, "date")
+            convert_date(obj, "date")  # type: ignore
 
             self.update_fields_with_dict(
                 obj, additional_fields=["depthplots", "qcreport", "screenshot"]
