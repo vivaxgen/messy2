@@ -13,7 +13,7 @@ dependencies = []
 messy2-mgr = "messy2.cli.commands:messy2_mgr"
 
 [project.scripts]
-messy2 = "messy2:main"
+messy2-mgr = "messy2.cli.commands:main"
 
 [tool.litestar]
 app = "messy2.lib.app:init_app"

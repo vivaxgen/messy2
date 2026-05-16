@@ -1,0 +1,4 @@
+
+
+# register click-based bash autocomplete
+eval "$(_MESSY2_MGR_COMPLETE=bash_source messy2-mgr)"

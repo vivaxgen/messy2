@@ -65,4 +65,12 @@ async def project_add():
     pass
 
 
+def main() -> None:
+    """
+    CLI entry point for pulsemgr standalone command
+    """
+
+    messy2_mgr()
+
+
 # EOF
