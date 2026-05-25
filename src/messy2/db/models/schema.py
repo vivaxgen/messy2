@@ -62,7 +62,7 @@ class Institution(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     __tablename__ = "institutions"
 
     code: Mapped[str] = mapped_column(types.String(24), nullable=False, unique=True)
-    alt_codes: Mapped[str | None] = mapped_column(
+    alt_code: Mapped[str | None] = mapped_column(
         types.String(47), nullable=True, unique=True
     )
     name: Mapped[str] = mapped_column(types.String(128), nullable=False, unique=True)
@@ -168,9 +168,16 @@ class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     )
     passage = enumkey_proxy("passage_id", "@PASSAGE")
 
-    collection_date: Mapped[date] = mapped_column(
-        types.Date, index=True, nullable=False
+    collection_date_year: Mapped[int] = mapped_column(
+        types.Integer, index=True, nullable=False
     )
+    collection_date_month: Mapped[int] = mapped_column(
+        types.Integer, index=True, nullable=False
+    )
+    collection_date_day: Mapped[int] = mapped_column(
+        types.Integer, index=True, nullable=False
+    )
+
     location: Mapped[str] = mapped_column(
         types.String(64), nullable=False, index=True, server_default=""
     )
@@ -235,13 +242,7 @@ class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     outbreak: Mapped[str] = mapped_column(
         types.String(64), nullable=False, server_default=""
     )
-    last_vaccinated_date: Mapped[date | None] = mapped_column(types.Date, nullable=True)
-    last_vaccinated_dose: Mapped[int] = mapped_column(
-        types.Integer, nullable=False, server_default="-1"
-    )
-    last_vaccinated_info: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
+
     treatment: Mapped[str] = mapped_column(
         types.String(64), nullable=False, server_default=""
     )
@@ -306,7 +307,6 @@ class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
 
     # sample identification
 
-    host_dob: Mapped[date | None] = mapped_column(types.Date, nullable=True)
     host_nik: Mapped[str] = mapped_column(
         types.String(24), nullable=False, server_default=""
     )
@@ -358,6 +358,12 @@ class Subject(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     __tablename__ = "subjects"
 
     code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
+
+    # dob - date of birth (allowing to have missing year, month or day)
+    dob_year: Mapped[int] = mapped_column(types.Integer, nullable=True)
+    dob_month: Mapped[int] = mapped_column(types.Integer, nullable=True)
+    dob_day: Mapped[int] = mapped_column(types.Integer, nullable=True)
+
     description: Mapped[str] = mapped_column(
         types.String(256), nullable=False, server_default=""
     )
