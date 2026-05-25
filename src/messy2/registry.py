@@ -1,4 +1,4 @@
-from .views import institution, InstitutionView
+from .views import institution
 
 ROUTE_HANDLERS = {
     institution.InstitutionView,
