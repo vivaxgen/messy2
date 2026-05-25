@@ -25,13 +25,13 @@ from litestar_pulse.views.modelview import LPModelView, form_submit_bar
 from ..db.models.schema import Project
 
 
-class ProjectForm(fb.FormBuilder):
-    name = f.TextField(
+class ProjectForm(fb.ModelForm):
+    name = fb.StringField(
         label="Project Name",
         required=True,
         max_length=64,
     )
-    description = f.TextField(
+    description = fb.StringField(
         label="Description",
         required=False,
         max_length=256,
@@ -45,7 +45,71 @@ class ProjectView(LPModelView):
 def generate_project_table(
     projects: list[Project], request: Request
 ) -> tuple[t.Tag, str]:
-    pass
+
+    not_guest = True
+
+    table_body = t.tbody()
+
+    for project in projects:
+        row = t.tr()[
+            t.td()[
+                (
+                    t.literal(
+                        '<input type="checkbox" name="project-ids" value="%d" />'
+                        % project.id
+                    )
+                    if not_guest
+                    else ""
+                )
+            ],
+            t.td()[
+                t.a(
+                    href=request.url_for("project-view-id", dbid=project.id),
+                )[project.code]
+            ],
+            t.td()[project.description or ""],
+        ]
+
+        table_body += row
+
+    project_table = t.table(
+        id="project-table",
+        class_="table table-condensed table-striped table-sticky",
+    )[
+        t.thead()[
+            t.tr()[
+                t.th(style="width: 2em"),
+                t.th()["Code"],
+                t.th()["Description"],
+            ]
+        ]
+    ]
+
+    project_table.add(table_body)
+
+    # wrap table in a scrollable wrapper so the sticky header works automatically
+    wrapped_table = t.div(class_="table-sticky-wrapper")[project_table]
+
+    if not_guest:
+        add_button = ("New project", request.url_for("project-edit", dbid=0))
+
+        bar = ct.selection_bar(
+            "project-ids",
+            action="/project/action",
+            add=add_button,
+        )
+        html, code = bar.render(wrapped_table)
+
+    else:
+        html = t.div()[wrapped_table]
+        code = ""
+
+    code += template_datatable_js
+    return html, code
+
+
+template_datatable_js = """
+"""
 
 
 # EOF
