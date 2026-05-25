@@ -25,8 +25,8 @@ To set up the server, run the following command:
     mkdir messy2.localhost
     cd messy2.localhost
     mkdir db
-    uv run litestar-pulse messy2-mgr db-init
-    uv run litestar-pulse messy2-mgr user-passwd --username sysadm --password NEW_PASSWORD
+    messy2-mgr db-init
+    messy2-mgr user-passwd --username sysadm --password NEW_PASSWORD
 
 This will create a new instance of MESSy/2 with the name "messy2.localhost" and initialize the database.
 
@@ -34,5 +34,5 @@ To run the server, use the following command:
 
 .. code-block:: bash
 
-    uv run litestar-pulse run --port 7979
+    litestar-pulse run --port 7979
 
