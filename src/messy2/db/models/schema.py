@@ -51,6 +51,24 @@ TODO:
 - __searchable__ provides a list of fields that can be searched with full text search.
   needs FullTextSearchMixin since postgresql and sqlite will need different implementations
 
+DESIGN:
+- 
+
+Instititution -> the institution (hospital, lab, etc.) that is associated with the specimen,
+    can be either originating institution or sampling institution.
+Project -> can have multiple institution, but institution can also be shared across projects
+
+Specimen -> the actual specimen
+Subject -> the individual (person/host/patient) from which specimen was taken
+Labware -> plate, tube, etc. that can hold specimen
+
+StorageUnit -> freezer, shelf, box, etc. that can hold labware
+SequencingRun -> libprep + sequencing run, can have multiple plates (labware) and
+    multiple samples (specimen) through the plates
+Sample -> a sample taken from a subject, can be linked to multiple specimen
+    (e.g. multiple swabs taken from the same patient), and can be linked to
+    multiple labware (e.g. same sample can be put in multiple tubes for different tests) 
+
 """
 
 
@@ -58,6 +76,7 @@ class Institution(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
 
     __managing_roles__ = RoleMixin.__managing_roles__ | {r.INSTITUTION_MANAGE}
     __modifying_roles__ = __managing_roles__ | {r.INSTITUTION_MODIFY}
+    __vieweing_roles__ = __modifying_roles__ | {r.INSTITUTION_VIEW}
 
     __tablename__ = "institutions"
 
@@ -125,17 +144,17 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
         order_by=projects_institutions.c.institution_id,
     )
 
-    samples: DynamicMapped[Sample] = relationship(
-        "Sample", lazy="dynamic", back_populates="project", passive_deletes=True
+    specimen: DynamicMapped["Specimen"] = relationship(
+        "Specimen", lazy="dynamic", back_populates="project", passive_deletes=True
     )
 
 
-class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
+class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     """
-    This class represent any Sample record
+    This class represent any Specimen record
     """
 
-    __tablename__ = "samples"
+    __tablename__ = "specimens"
 
     project_id: Mapped[int] = mapped_column(
         types.Integer,
@@ -302,7 +321,7 @@ class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     )
 
     related_sample_id: Mapped[int | None] = mapped_column(
-        types.Integer, ForeignKey("samples.id"), nullable=True
+        types.Integer, ForeignKey("specimens.id"), nullable=True
     )
 
     # sample identification
@@ -504,9 +523,11 @@ class LabwarePosition(IdentityUserAuditBase, RoleMixin):
     )
 
     sample_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("samples.id"), index=True, nullable=True
+        types.Integer, ForeignKey("specimens.id"), index=True, nullable=True
     )
-    sample: Mapped[Sample] = relationship(Sample, uselist=False, foreign_keys=sample_id)
+    sample: Mapped["Specimen"] = relationship(
+        "Specimen", uselist=False, foreign_keys=sample_id
+    )
 
     position: Mapped[str] = mapped_column(
         types.String(3), nullable=False, server_default=""
@@ -579,15 +600,15 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
 
     def get_related_samples(self, scalar=False):
         if scalar:
-            q = select(func.count(Sample.id))
+            q = select(func.count(Specimen.id))
         else:
-            q = select(Sample)
+            q = select(Specimen)
         q = (
             q.join(LabwarePosition)
             .join(Labware)
             .join(SequencingRunPlate)
             .filter(SequencingRunPlate.sequencingrun_id == self.id)
-            .filter(~Sample.code.in_(["-", "*", "NTC1", "NTC2", "NTC3", "NTC4"]))
+            .filter(~Specimen.code.in_(["-", "*", "NTC1", "NTC2", "NTC3", "NTC4"]))
         )
         if scalar:
             return object_session(self).scalar(q)  # type: ignore
