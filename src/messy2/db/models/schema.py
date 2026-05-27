@@ -149,6 +149,32 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     )
 
 
+class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
+    """
+    This class represent a collection of information related to specimen collection, such as
+    sampling method, sampling personnel, etc. This is separated from Specimen since it can be
+    shared across multiple specimens (e.g. multiple swabs taken from the same patient at the same time)
+    """
+
+    __tablename__ = "collectioninfos"
+
+    date: Mapped[date] = mapped_column(
+        types.Date, nullable=False, server_default=func.current_date()
+    )
+    method: Mapped[str] = mapped_column(
+        types.String(64), nullable=False, server_default=""
+    )
+    personnel: Mapped[str] = mapped_column(
+        types.String(64), nullable=False, server_default=""
+    )
+    remark: Mapped[str] = deferred(
+        mapped_column(types.Text, nullable=False, server_default="")
+    )
+    data: Mapped[dict[str, Any]] = deferred(
+        mapped_column(types.JSON, nullable=False, server_default="null")
+    )
+
+
 class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     """
     This class represent any Specimen record
