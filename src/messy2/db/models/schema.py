@@ -161,18 +161,26 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     date: Mapped[date] = mapped_column(
         types.Date, nullable=False, server_default=func.current_date()
     )
-    method: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
+
+    time_point: Mapped[int] = mapped_column(
+        types.Integer, nullable=False, server_default="0"
     )
-    personnel: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
+
+    subject_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("subjects.id"), nullable=False
     )
-    remark: Mapped[str] = deferred(
-        mapped_column(types.Text, nullable=False, server_default="")
+    subject: Mapped[Subject] = relationship(
+        "Subject", uselist=False, foreign_keys=subject_id
     )
-    data: Mapped[dict[str, Any]] = deferred(
-        mapped_column(types.JSON, nullable=False, server_default="null")
+
+    project_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("projects.id"), nullable=False
     )
+    project: Mapped[Project] = relationship(
+        "Project", uselist=False, foreign_keys=project_id
+    )
+
+    # clinical information related to the collection
 
 
 class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
