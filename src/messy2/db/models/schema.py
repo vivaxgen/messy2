@@ -196,15 +196,6 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         "Subject", uselist=False, foreign_keys=subject_id
     )
 
-    collectioninfo_id: Mapped[int] = mapped_column(
-        types.Integer,
-        ForeignKey("collectioninfos.id"),
-        nullable=False,
-    )
-    collectioninfo: Mapped[CollectionInfo] = relationship(
-        CollectionInfo, uselist=False, foreign_keys=collectioninfo_id
-    )
-
     project: Mapped[Project] = relationship(
         "Project",
         uselist=False,
