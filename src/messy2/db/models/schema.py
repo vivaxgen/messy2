@@ -37,10 +37,9 @@ from litestar_pulse.db.models.coremixins import (
 )
 from litestar_pulse.db.models.enumkey import EnumKey, enumkey_proxy
 from litestar_pulse.db.models.account import Group, User
+from litestar_pulse.db import get_handler
 
 from ...lib import roles as r
-
-from ...utils import get_handler, convert_date
 
 MESSy2_STORAGE = "messy2-storage"
 
@@ -507,60 +506,6 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
         if scalar:
             return object_session(self).scalar(q)  # type: ignore
         return object_session(self).execute(q).scalars()  # type: ignore
-
-    def update(self, obj):
-
-        if isinstance(obj, dict):
-
-            dbh = get_handler()  # type: ignore
-
-            if "group" in obj:
-                obj["group_id"] = dbh.get_group(obj["group"]).id
-                del obj["group"]
-
-            if type(inst := obj.get("sequencing_provider", None)) == str:
-                self.sequencing_provider_id = dbh.get_institutions_by_codes(
-                    obj["sequencing_provider"], None, raise_if_empty=True
-                )[0].id
-                del obj["sequencing_provider"]
-
-            convert_date(obj, "date")  # type: ignore
-
-            self.update_fields_with_dict(
-                obj, additional_fields=["depthplots", "qcreport", "screenshot"]
-            )
-            self.update_ek_with_dict(obj, dbh=dbh)
-
-        else:
-            raise RuntimeError("PROG/ERR: can only update from dict object")
-
-    def as_dict(self, exclude=None):
-        d = super().as_dict(exclude={"sequences", "plates", "additional_files"})
-        d["plates"] = [
-            [p.labware.code, p.adapterindex, p.lane, p.note] for p in self.plates
-        ]
-        return d
-
-    @classmethod
-    def from_dict(cls, a_dict, dbh):
-        run = super().from_dict(a_dict, dbh)
-        for rp in a_dict.get("plates", []):
-            labware = dbh.get_labwares_by_codes(rp[0], groups=None, ignore_acl=True)[0]
-            d = dict(
-                sequencingrun_id=run.id,
-                labware_id=labware.id,
-                adapterindex=rp[1],
-                lane=rp[2],
-                note=rp[3],
-            )
-            srp = SequencingRunPlate.from_dict(d, dbh)
-
-    def can_modify(self, user):
-        if user.has_roles(*self.__managing_roles__):
-            return True
-        if user.has_roles(*self.__modifying_roles__):  # and user.in_group(self.group):
-            return True
-        return False
 
 
 class SequencingRunPlate(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
