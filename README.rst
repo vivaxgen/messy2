@@ -34,5 +34,5 @@ To run the server, use the following command:
 
 .. code-block:: bash
 
-    litestar-pulse run --port 7979
+    litestar --app messy2:app run --port 7979
 
