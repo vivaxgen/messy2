@@ -151,12 +151,16 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
 
 class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     """
-    This class represent a collection of information related to specimen collection, such as
-    sampling method, sampling personnel, etc. This is separated from Specimen since it can be
-    shared across multiple specimens (e.g. multiple swabs taken from the same patient at the same time)
+    This class represent information of collection event related to specimen collection, such as
+    date of collection, time point, location, etc and any other (meta) information pertinent
+    to the collection event.
+    This is separated from Specimen since it can be shared across multiple specimens
+    (e.g. different blood (venous, finger-prick) taken from the same patient at the same time)
     """
 
     __tablename__ = "collectioninfos"
+
+    # time, location and institution
 
     date: Mapped[date] = mapped_column(
         types.Date, nullable=False, server_default=func.current_date()
@@ -166,6 +170,14 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         types.Integer, nullable=False, server_default="0"
     )
 
+    sampling_institution_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("institutions.id"), nullable=False
+    )
+    sampling_institution: Mapped[Institution] = relationship(
+        Institution, uselist=False, foreign_keys=sampling_institution_id
+    )
+
+    # subject and project information
     subject_id: Mapped[int] = mapped_column(
         types.Integer, ForeignKey("subjects.id"), nullable=False
     )
@@ -180,7 +192,9 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         "Project", uselist=False, foreign_keys=project_id
     )
 
-    # clinical information related to the collection
+    # clinical and other meta information at collection time point
+
+    #
 
 
 class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
@@ -190,26 +204,19 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
 
     __tablename__ = "specimens"
 
-    project_id: Mapped[int] = mapped_column(
+    collectioninfo_id: Mapped[int] = mapped_column(
         types.Integer,
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+        ForeignKey("collectioninfos.id"),
+        nullable=False,  # , unique=True
+        # one-to-one relationship, but not enforcing unique constraint since some
+        # specimens may not have collection info (eg. control, lab strain, etc)
     )
-    project: Mapped[Any] = relationship(
-        "Project", uselist=False, back_populates="samples"
+    collectioninfo: Mapped[CollectionInfo] = relationship(
+        CollectionInfo, uselist=False, foreign_keys=collectioninfo_id
     )
 
     # various code
     code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
-    acc_code: Mapped[str | None] = mapped_column(
-        types.String(31), nullable=True, unique=True
-    )
-    received_date: Mapped[date] = mapped_column(types.Date, nullable=False)
-
-    sequence_name: Mapped[str | None] = mapped_column(
-        types.String(63), nullable=True, index=True, unique=True
-    )
 
     species_id: Mapped[int] = mapped_column(
         types.Integer, ForeignKey("enumkeys.id"), nullable=False
@@ -221,116 +228,6 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     )
     passage = enumkey_proxy("passage_id", "@PASSAGE")
 
-    collection_date_year: Mapped[int] = mapped_column(
-        types.Integer, index=True, nullable=False
-    )
-    collection_date_month: Mapped[int] = mapped_column(
-        types.Integer, index=True, nullable=False
-    )
-    collection_date_day: Mapped[int] = mapped_column(
-        types.Integer, index=True, nullable=False
-    )
-
-    location: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, index=True, server_default=""
-    )
-    location_info: Mapped[str] = mapped_column(
-        types.String(128), nullable=False, server_default=""
-    )
-
-    host_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    host = enumkey_proxy("host_id", "@SPECIES")
-
-    host_info: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
-    host_gender: Mapped[str] = mapped_column(
-        types.String(1), nullable=False, server_default="X"
-    )
-    host_age: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-
-    host_occupation_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    host_occupation = enumkey_proxy("host_occupation_id", "@HOST_OCCUPATION")
-
-    host_status_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    host_status = enumkey_proxy("host_status_id", "@HOST_STATUS")
-
-    host_severity: Mapped[int] = mapped_column(
-        types.Integer, nullable=False, server_default="-1"
-    )
-
-    infection_date: Mapped[date | None] = mapped_column(types.Date, nullable=True)
-    symptom_date: Mapped[date | None] = mapped_column(types.Date, nullable=True)
-    # space-delimited symptom list
-    symptoms: Mapped[str] = mapped_column(
-        types.String(128), nullable=False, server_default=""
-    )
-    # space-delimited comorbid list
-    comorbids: Mapped[str] = mapped_column(
-        types.String(128), nullable=False, server_default=""
-    )
-    last_infection_date: Mapped[date | None] = mapped_column(types.Date, nullable=True)
-    last_infection_info: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
-
-    category_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    category = enumkey_proxy("category_id", "@CATEGORY")
-
-    specimen_type_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    specimen_type = enumkey_proxy("specimen_type_id", "@SPECIMEN_TYPE")
-
-    outbreak: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
-
-    treatment: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
-
-    viral_load: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_target1: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_target2: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_target3: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_target4: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_host1: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-    ct_host2: Mapped[float] = mapped_column(
-        types.Float, nullable=False, server_default="-1"
-    )
-
-    ct_method_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("enumkeys.id"), nullable=False
-    )
-    ct_method = enumkey_proxy("ct_method_id", "@CT_METHOD")
-
-    ct_info: Mapped[str] = mapped_column(
-        types.String(64), nullable=False, server_default=""
-    )
-
     # originating lab, where diagnostic tests were performed or samples were prepared
     originating_code: Mapped[str | None] = mapped_column(
         types.String(32), nullable=True
@@ -341,30 +238,6 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     )
     originating_institution: Mapped[Institution] = relationship(
         Institution, uselist=False, foreign_keys=originating_institution_id
-    )
-
-    # sampling institution, where the samples were initially taken, usually hospital
-    # or health facility.
-    sampling_code: Mapped[str | None] = mapped_column(types.String(32), nullable=True)
-
-    sampling_institution_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("institutions.id"), nullable=False
-    )
-    sampling_institution: Mapped[Institution] = relationship(
-        Institution, uselist=False, foreign_keys=sampling_institution_id
-    )
-
-    related_sample_id: Mapped[int | None] = mapped_column(
-        types.Integer, ForeignKey("specimens.id"), nullable=True
-    )
-
-    # sample identification
-
-    host_nik: Mapped[str] = mapped_column(
-        types.String(24), nullable=False, server_default=""
-    )
-    host_nar: Mapped[str] = mapped_column(
-        types.String(24), nullable=False, server_default=""
     )
 
     remark: Mapped[str] = deferred(
@@ -388,17 +261,6 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         UniqueConstraint("sampling_code", "sampling_institution_id"),
     )
 
-    __ek_fields__ = [
-        "species",
-        "passage",
-        "host",
-        "host_status",
-        "host_occupation",
-        "specimen_type",
-        "ct_method",
-        "category",
-    ]
-
     __managing_roles__ = RoleMixin.__managing_roles__ | {r.SAMPLE_MANAGE}
     __modifying_roles__ = __managing_roles__ | {r.SAMPLE_MODIFY}
 
@@ -412,25 +274,35 @@ class Subject(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
 
     code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
 
+    initials: Mapped[str] = mapped_column(
+        types.String(8), nullable=False, server_default=""
+    )
+
+    last_name: Mapped[str] = mapped_column(
+        types.String(64), nullable=False, server_default=""
+    )
+    first_name: Mapped[str] = mapped_column(
+        types.String(64), nullable=False, server_default=""
+    )
+
+    father_initials: Mapped[str] = mapped_column(
+        types.String(8), nullable=False, server_default=""
+    )
+    mother_initials: Mapped[str] = mapped_column(
+        types.String(8), nullable=False, server_default=""
+    )
+
     # dob - date of birth (allowing to have missing year, month or day)
     dob_year: Mapped[int] = mapped_column(types.Integer, nullable=True)
     dob_month: Mapped[int] = mapped_column(types.Integer, nullable=True)
     dob_day: Mapped[int] = mapped_column(types.Integer, nullable=True)
 
-    description: Mapped[str] = mapped_column(
-        types.String(256), nullable=False, server_default=""
-    )
     remark: Mapped[str] = deferred(
         mapped_column(types.Text, nullable=False, server_default="")
     )
     data: Mapped[dict[str, Any]] = deferred(
-        mapped_column(types.JSON, nullable=False, server_default="null")
+        mapped_column(JsonB, nullable=False, server_default="null")
     )
-
-    group_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("groups.id"), nullable=False
-    )
-    group: Mapped[Group] = relationship(Group, uselist=False, foreign_keys=group_id)
 
     contact: Mapped[str] = deferred(
         mapped_column(types.String(64), nullable=False, server_default="")
@@ -443,17 +315,6 @@ class Labware(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     """
 
     __tablename__ = "labwares"
-
-    user_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("users.id"), nullable=False
-    )
-    user: Mapped[User] = relationship(User, uselist=False, foreign_keys=user_id)
-
-    # primary group of user
-    group_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("groups.id"), nullable=False
-    )
-    group: Mapped[Group] = relationship(Group, uselist=False, foreign_keys=group_id)
 
     code: Mapped[str] = mapped_column(
         types.String(32), nullable=False, unique=True, server_default=""
@@ -501,8 +362,6 @@ class Labware(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
         back_populates="plate",
     )
 
-    __ek_fields__ = ["specimen_type", "experiment_type"]
-
     __managing_roles__ = RoleMixin.__managing_roles__ | {r.PLATE_MANAGE}
     __modifying_roles__ = __managing_roles__ | {r.PLATE_MODIFY}
 
@@ -527,7 +386,7 @@ class StorageUnit(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
         mapped_column(types.Text, nullable=False, server_default="")
     )
     data: Mapped[dict[str, Any]] = deferred(
-        mapped_column(types.JSON, nullable=False, server_default="null")
+        mapped_column(JsonB, nullable=False, server_default="null")
     )
 
     labwares: Mapped[list[Labware]] = relationship(
