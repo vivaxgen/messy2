@@ -245,6 +245,14 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     # various code
     code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
 
+    project: Mapped[Project] = relationship(
+        "Project",
+        uselist=False,
+        primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
+        secondaryjoin="CollectionInfo.project_id == Project.id",
+        viewonly=True,
+    )
+
     species_id: Mapped[int] = mapped_column(
         types.Integer, ForeignKey("enumkeys.id"), nullable=False
     )
