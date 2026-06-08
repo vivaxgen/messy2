@@ -258,7 +258,6 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
 
     __table_args__ = (
         UniqueConstraint("originating_code", "originating_institution_id"),
-        UniqueConstraint("sampling_code", "sampling_institution_id"),
     )
 
     __managing_roles__ = RoleMixin.__managing_roles__ | {r.SAMPLE_MANAGE}
