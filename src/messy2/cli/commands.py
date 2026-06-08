@@ -65,12 +65,4 @@ async def project_add():
     pass
 
 
-def main() -> None:
-    """
-    CLI entry point for messy2_mgr standalone command
-    """
-
-    messy2_mgr()
-
-
 # EOF
