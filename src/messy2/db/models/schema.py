@@ -152,9 +152,11 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     specimen: DynamicMapped["Specimen"] = relationship(
         "Specimen",
         lazy="dynamic",
+        secondary="collectioninfos",
+        primaryjoin="Project.id == CollectionInfo.project_id",
+        secondaryjoin="CollectionInfo.id == Specimen.collectioninfo_id",
         back_populates="project",
         passive_deletes=True,
-        foreign_keys="Specimen.project_id",
     )
 
 
@@ -194,11 +196,21 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         "Subject", uselist=False, foreign_keys=subject_id
     )
 
-    project_id: Mapped[int] = mapped_column(
-        types.Integer, ForeignKey("projects.id"), nullable=False
+    collectioninfo_id: Mapped[int] = mapped_column(
+        types.Integer,
+        ForeignKey("collectioninfos.id"),
+        nullable=False,
     )
+    collectioninfo: Mapped[CollectionInfo] = relationship(
+        CollectionInfo, uselist=False, foreign_keys=collectioninfo_id
+    )
+
     project: Mapped[Project] = relationship(
-        "Project", uselist=False, foreign_keys=project_id
+        "Project",
+        uselist=False,
+        primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
+        secondaryjoin="CollectionInfo.project_id == Project.id",
+        viewonly=True,
     )
 
     specimens: DynamicMapped["Specimen"] = relationship(
