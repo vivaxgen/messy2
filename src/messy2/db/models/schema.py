@@ -56,7 +56,7 @@ TODO:
 DESIGN:
 - 
 
-Instititution -> the institution (hospital, lab, etc.) that is associated with the specimen,
+Institution -> the institution (hospital, lab, etc.) that is associated with the specimen,
     can be either originating institution or sampling institution.
 Project -> can have multiple institution, but institution can also be shared across projects
 
@@ -68,7 +68,7 @@ StorageUnit -> freezer, shelf, box, etc. that can hold labware
 SequencingRun -> libprep + sequencing run, can have multiple plates (labware) and
     multiple samples (specimen) through the plates
 Sample -> a sample taken from a subject, can be linked to multiple specimen
-    (e.g. multiple swabs taken from the same patient), and can be linked to
+    (e.g. multiple swabs taken from the same patient at the same time), and can be linked to
     multiple labware (e.g. same sample can be put in multiple tubes for different tests) 
 
 """
@@ -477,6 +477,9 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
     __tablename__ = "sequencingruns"
     __attachedfiles_category__ = {"depth-plot", "general", "qc-report", "screenshot"}
 
+    # Constants for filtering out non-sample specimens
+    EXCLUDED_SPECIMEN_CODES = {"-", "*", "NTC1", "NTC2", "NTC3", "NTC4"}
+
     code: Mapped[str] = mapped_column(
         types.String(16), nullable=False, unique=True, server_default=""
     )
@@ -527,20 +530,26 @@ class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin)
         return f"SequencingRun('{self.code}')"
 
     def get_related_samples(self, scalar=False):
+        session = object_session(self)
+        if session is None:
+            raise RuntimeError("SequencingRun instance is not attached to a session")
+
         if scalar:
             q = select(func.count(Specimen.id))
         else:
             q = select(Specimen)
+
         q = (
             q.join(LabwarePosition)
             .join(Labware)
             .join(SequencingRunPlate)
             .filter(SequencingRunPlate.sequencingrun_id == self.id)
-            .filter(~Specimen.code.in_(["-", "*", "NTC1", "NTC2", "NTC3", "NTC4"]))
+            .filter(~Specimen.code.in_(list(self.EXCLUDED_SPECIMEN_CODES)))
         )
+
         if scalar:
-            return object_session(self).scalar(q)  # type: ignore
-        return object_session(self).execute(q).scalars()  # type: ignore
+            return session.scalar(q)
+        return session.scalars(q)
 
 
 class SequencingRunPlate(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
