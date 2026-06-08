@@ -206,8 +206,10 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     project: Mapped[Project] = relationship(
         "Project",
         uselist=False,
-        primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
-        secondaryjoin="CollectionInfo.project_id == Project.id",
+        primaryjoin="CollectionInfo.project_id == Project.id",
+        secondary="projects_institutions",
+        secondaryjoin="Project.id == projects_institutions.c.project_id",
+        back_populates="collectioninfos",
         viewonly=True,
     )
 
