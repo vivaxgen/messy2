@@ -145,12 +145,16 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
         order_by=projects_institutions.c.institution_id,
     )
 
+    collectioninfos: DynamicMapped["CollectionInfo"] = relationship(
+        "CollectionInfo", back_populates="project", passive_deletes=True
+    )
+
     specimen: DynamicMapped["Specimen"] = relationship(
-        "Specimen", 
-        lazy="dynamic", 
-        back_populates="project", 
+        "Specimen",
+        lazy="dynamic",
+        back_populates="project",
         passive_deletes=True,
-        foreign_keys="Specimen.project_id"
+        foreign_keys="Specimen.project_id",
     )
 
 
@@ -195,6 +199,14 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     )
     project: Mapped[Project] = relationship(
         "Project", uselist=False, foreign_keys=project_id
+    )
+
+    specimens: DynamicMapped["Specimen"] = relationship(
+        "Specimen",
+        lazy="dynamic",
+        back_populates="collectioninfo",
+        passive_deletes=True,
+        foreign_keys="Specimen.collectioninfo_id",
     )
 
     # clinical and other meta information at collection time point
