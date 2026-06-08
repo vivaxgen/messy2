@@ -78,7 +78,7 @@ class Institution(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
 
     __managing_roles__ = RoleMixin.__managing_roles__ | {r.INSTITUTION_MANAGE}
     __modifying_roles__ = __managing_roles__ | {r.INSTITUTION_MODIFY}
-    __vieweing_roles__ = __modifying_roles__ | {r.INSTITUTION_VIEW}
+    __viewing_roles__ = __modifying_roles__ | {r.INSTITUTION_VIEW}
 
     __tablename__ = "institutions"
 
@@ -100,7 +100,7 @@ class Institution(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
         mapped_column(types.Text, nullable=False, server_default="")
     )
 
-    __searchable__ = ["code", "alt_codes", "name", "address"]
+    __searchable__ = ["code", "alt_code", "name", "address"]
 
 
 projects_institutions = Table(
@@ -579,7 +579,7 @@ class SequencingRunPlate(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleM
 
     note: Mapped[str | None] = mapped_column(types.Text, nullable=True)
 
-    __ek_fields__ = {"adapterindex"}
+    __ek_fields__ = ["adapterindex"]
 
     __table_args__ = (
         UniqueConstraint("sequencingrun_id", "labware_id"),
