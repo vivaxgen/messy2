@@ -206,11 +206,8 @@ class CollectionInfo(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
 
     project: Mapped[Project] = relationship(
         "Project",
-        uselist=False,
-        primaryjoin="CollectionInfo.project_id == Project.id",
-        secondary="projects_institutions",
-        secondaryjoin="Project.id == projects_institutions.c.project_id",
         back_populates="collectioninfos",
+        foreign_keys=[project_id],
         viewonly=True,
     )
 
@@ -245,18 +242,17 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         CollectionInfo, uselist=False, foreign_keys=collectioninfo_id
     )
 
-    # various code
-    code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
-
     project: Mapped[Project] = relationship(
         "Project",
-        uselist=False,
+        secondary="collectioninfos",
         primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
-        secondary="projects_institutions",
-        secondaryjoin="Project.id == projects_institutions.c.project_id",
-        remote_side=[projects_institutions.c.project_id],
+        secondaryjoin="CollectionInfo.project_id == Project.id",
         viewonly=True,
+        uselist=False,
     )
+
+    # various code
+    code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
 
     species_id: Mapped[int] = mapped_column(
         types.Integer, ForeignKey("enumkeys.id"), nullable=False
