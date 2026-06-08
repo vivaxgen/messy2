@@ -146,7 +146,11 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     )
 
     specimen: DynamicMapped["Specimen"] = relationship(
-        "Specimen", lazy="dynamic", back_populates="project", passive_deletes=True
+        "Specimen", 
+        lazy="dynamic", 
+        back_populates="project", 
+        passive_deletes=True,
+        foreign_keys="Specimen.project_id"
     )
 
 
