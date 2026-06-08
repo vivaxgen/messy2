@@ -22,6 +22,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy import types, func
+from sqlalchemy.ext.associationproxy import association_proxy, AssociationProxy
 
 from advanced_alchemy.base import orm_registry
 from advanced_alchemy.types import JsonB
@@ -244,16 +245,10 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         CollectionInfo, uselist=False, foreign_keys=collectioninfo_id
     )
 
+    project: AssociationProxy[Project] = association_proxy("collectioninfo", "project")
+
     # various code
     code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
-
-    project: Mapped[Project] = relationship(
-        "Project",
-        uselist=False,
-        primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
-        secondaryjoin="CollectionInfo.project_id == Project.id",
-        viewonly=True,
-    )
 
     species_id: Mapped[int] = mapped_column(
         types.Integer, ForeignKey("enumkeys.id"), nullable=False
@@ -464,7 +459,7 @@ class LabwarePosition(IdentityUserAuditBase, RoleMixin):
     value: Mapped[float] = mapped_column(
         types.Float, nullable=False, server_default="-1"
     )
-    volumne: Mapped[float] = mapped_column(
+    volume: Mapped[float] = mapped_column(
         types.Float, nullable=False, server_default="-1"
     )
     note: Mapped[str | None] = mapped_column(types.String(31), nullable=True)
