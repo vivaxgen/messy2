@@ -146,7 +146,10 @@ class Project(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     )
 
     collectioninfos: DynamicMapped["CollectionInfo"] = relationship(
-        "CollectionInfo", back_populates="project", passive_deletes=True
+        "CollectionInfo",
+        primaryjoin="Project.id == CollectionInfo.project_id",
+        back_populates="project",
+        passive_deletes=True,
     )
 
     specimen: DynamicMapped["Specimen"] = relationship(
