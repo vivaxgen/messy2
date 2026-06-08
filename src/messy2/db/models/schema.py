@@ -253,7 +253,8 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         uselist=False,
         primaryjoin="Specimen.collectioninfo_id == CollectionInfo.id",
         secondary="projects_institutions",
-        secondaryjoin="CollectionInfo.project_id == Project.id",
+        secondaryjoin="Project.id == projects_institutions.c.project_id",
+        remote_side=[projects_institutions.c.project_id],
         viewonly=True,
     )
 
