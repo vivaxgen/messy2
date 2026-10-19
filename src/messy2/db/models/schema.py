@@ -69,8 +69,10 @@ SequencingRun -> libprep + sequencing run, can have multiple plates (labware) an
     multiple samples (specimen) through the plates
 Sample -> a sample taken from a subject, can be linked to multiple specimen
     (e.g. multiple swabs taken from the same patient at the same time), and can be linked to
-    multiple labware (e.g. same sample can be put in multiple tubes for different tests) 
-
+    multiple labware (e.g. same sample can be put in multiple tubes for different tests)
+SequencingPanel -> panel used for individual sample in the SequencingRun: WGS, Amplicon,
+    ONT-G6PDv1, ONT-G6PDv1-1
+    can have multiple reference (1 to many) to other SequencingPanel
 """
 
 
@@ -300,6 +302,74 @@ class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     __modifying_roles__ = __managing_roles__ | {r.SAMPLE_MODIFY}
 
 
+class Specimen(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
+    """
+    Represents the raw physical intake (e.g., patient swab, blood tube).
+    Agnostic of species until processed.
+    """
+    __tablename__ = "specimens"
+
+    collectioninfo_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("collectioninfos.id"), nullable=False
+    )
+    collectioninfo: Mapped[CollectionInfo] = relationship(CollectionInfo, uselist=False)
+
+    code: Mapped[str] = mapped_column(types.String(16), nullable=False, unique=True)
+
+    originating_code: Mapped[str | None] = mapped_column(types.String(32), nullable=True)
+    originating_institution_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("institutions.id"), nullable=False
+    )
+    originating_institution: Mapped[Institution] = relationship(Institution, uselist=False)
+
+    # One specimen can yield multiple processed samples/isolates
+    samples: Mapped[list[Sample]] = relationship(
+        "Sample", back_populates="specimen", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+    remark: Mapped[str] = deferred(mapped_column(types.Text, nullable=False, server_default=""))
+    comment: Mapped[str] = deferred(mapped_column(types.Text, nullable=False, server_default=""))
+    flag: Mapped[int] = mapped_column(types.Integer, nullable=False, server_default="0")
+    extdata: Mapped[dict[str, Any]] = deferred(mapped_column(types.JSON, nullable=False, server_default="null"))
+
+    __table_args__ = (UniqueConstraint("originating_code", "originating_institution_id"),)
+
+
+class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
+    """
+    Represents the processed isolate, extract, or aliquot where 
+    species and passage characteristics are defined post-processing.
+    """
+    __tablename__ = "samples"
+
+    code: Mapped[str] = mapped_column(types.String(24), nullable=False, unique=True)
+
+    specimen_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("specimens.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    specimen: Mapped[Specimen] = relationship(Specimen, back_populates="samples", uselist=False)
+
+    # Species and passage are defined here because they are known after processing/isolation
+    species_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("enumkeys.id"), nullable=False
+    )
+    species = enumkey_proxy("species_id", "@SPECIES")
+
+    passage_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("enumkeys.id"), nullable=False
+    )
+    passage = enumkey_proxy("passage_id", "@PASSAGE")
+
+    remark: Mapped[str] = deferred(mapped_column(types.Text, nullable=False, server_default=""))
+    extdata: Mapped[dict[str, Any]] = deferred(mapped_column(JsonB, nullable=False, server_default="null"))
+
+    # Placed into labware wells for sequencing/assays
+    positions: Mapped[list[LabwarePosition]] = relationship(
+        "LabwarePosition", back_populates="sample", passive_deletes=True
+    )
+
+
+
 class Subject(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
     """
     This class represent an individual subject (person/patient/host) record
@@ -343,6 +413,63 @@ class Subject(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
         mapped_column(types.String(64), nullable=False, server_default="")
     )
 
+
+class Sample(IdentityUUIDv7UserAuditBase, MESSy2Attachment, RoleMixin):
+    """
+    Represents a biological sample derived from a subject/specimen, 
+    ready for laboratory assay and plating.
+    """
+    __tablename__ = "samples"
+
+    code: Mapped[str] = mapped_column(types.String(24), nullable=False, unique=True)
+
+    # Link to Subject
+    subject_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("subjects.id"), nullable=False, index=True
+    )
+    subject: Mapped[Subject] = relationship(Subject, uselist=False, foreign_keys=[subject_id])
+
+    # If a sample can link to multiple specimens (or vice versa), you can use an association table 
+    # or a direct foreign key depending on your exact cardinality. 
+    # Assuming a sample can be derived from one or more specimens:
+    specimens: Mapped[list[Specimen]] = relationship(
+        "Specimen",
+        secondary="specimens_samples",
+        back_populates="samples",
+    )
+
+    species_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("enumkeys.id"), nullable=False
+    )
+    species = enumkey_proxy("species_id", "@SPECIES")
+
+    passage_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("enumkeys.id"), nullable=False
+    )
+    passage = enumkey_proxy("passage_id", "@PASSAGE")
+
+    remark: Mapped[str] = deferred(
+        mapped_column(types.Text, nullable=False, server_default="")
+    )
+    extdata: Mapped[dict[str, Any]] = deferred(
+        mapped_column(JsonB, nullable=False, server_default="null")
+    )
+
+    # Downstream link: A sample can be aliquoted into multiple labware positions
+    positions: Mapped[list[LabwarePosition]] = relationship(
+        "LabwarePosition", back_populates="sample", passive_deletes=True
+    )
+
+    __managing_roles__ = RoleMixin.__managing_roles__ | {r.SAMPLE_MANAGE}
+    __modifying_roles__ = __managing_roles__ | {r.SAMPLE_MODIFY}
+
+
+specimens_samples = Table(
+    "specimens_samples",
+    orm_registry.metadata,
+    Column("specimen_id", types.Integer, ForeignKey("specimens.id", ondelete="CASCADE"), primary_key=True),
+    Column("sample_id", types.Integer, ForeignKey("samples.id", ondelete="CASCADE"), primary_key=True),
+)
 
 class Labware(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
     """
@@ -460,6 +587,12 @@ class LabwarePosition(IdentityUserAuditBase, RoleMixin):
     position: Mapped[str] = mapped_column(
         types.String(3), nullable=False, server_default=""
     )
+    assay_id: Mapped[int] = mapped_column(
+        types.Integer, ForeignKey("assays.id"), index=True, nullable=True
+    )
+    assay: Mapped["Assay"] = relationship(
+        "Assay", uselist=False, foreign_key=assay_id
+    )
     value: Mapped[float] = mapped_column(
         types.Float, nullable=False, server_default="-1"
     )
@@ -467,6 +600,44 @@ class LabwarePosition(IdentityUserAuditBase, RoleMixin):
         types.Float, nullable=False, server_default="-1"
     )
     note: Mapped[str | None] = mapped_column(types.String(31), nullable=True)
+
+
+class Assay(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):
+    """
+    Thic class represent a panel option for sequencing: WGS, Amplicon, etc
+    """
+
+    __tablename__ = "assays"
+    __attachedfiles_category__ = {"bed", "fasta", "general"}
+
+    code: Mapped[str] = mapped_column(
+        types.String(16), nullable=False, unique=True, server_default=""
+    )
+    description: Mapped[str] = mapped_column(
+        types.String(256), nullable=False, server_default=""
+    )
+    remark: Mapped[str] = deferred(
+        mapped_column(types.Text, nullable=False, server_default="")
+    )
+    data: Mapped[dict[str, Any]] = deferred(
+        mapped_column(types.JSON, nullable=False, server_default="null")
+    )
+
+    # Points to the parent assay's ID (e.g., a sub-assay pointing to a backbone panel)
+    parent_assay_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assays.id"))
+
+    # Many-to-one: A sub-assay has one parent assay
+    parent_assay: Mapped[Optional["Assay"]] = relationship(
+        "Assay",
+        remote_side=[id],
+        back_populates="sub_assays"
+    )
+
+    # One-to-many: A parent assay can have multiple sub-assays or spiked-in custom assays
+    sub_assays: Mapped[List["Assay"]] = relationship(
+        "Assay",
+        back_populates="parent_assay"
+    )
 
 
 class SequencingRun(IdentityUUIDv7UserAuditBase, MESSy2AttachedFiles, RoleMixin):

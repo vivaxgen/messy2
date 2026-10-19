@@ -82,6 +82,8 @@ class ProjectService(handler.LPBaseService[schema.Project]):
 class Model(handler.Model):
     Institution = schema.Institution
     Project = schema.Project
+    CollectionInfo = schema.CollectionInfo
+    Specimen = schema.Specimen
     Sample = schema.Sample
     Subject = schema.Subject
 
